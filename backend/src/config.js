@@ -6,7 +6,7 @@ const ROOT_DIR = path.join(__dirname, '..');
 
 module.exports = {
   PORT: process.env.PORT || 4000,
-  DATA_FILE: process.env.DATA_FILE || path.join(ROOT_DIR, 'data', 'db.json'),
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/h2omind',
   SALT_ROUNDS: parseInt(process.env.SALT_ROUNDS || '10', 10),
 };
 

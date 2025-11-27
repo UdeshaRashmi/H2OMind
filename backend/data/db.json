@@ -17,6 +17,24 @@
       "dailyGoal": 1700,
       "theme": "light",
       "createdAt": "2025-11-27T11:11:19.579Z"
+    },
+    {
+      "id": "be3d6d03-1cd1-4276-acf7-6afcaaa6c9c0",
+      "name": "Smoke Tester",
+      "email": "test+1764242589516@example.com",
+      "passwordHash": "$2b$10$FLhkL3ssyu39zkFCArS79.GEKFIG.GAuohLUiuljMvTjTQTqm1mGG",
+      "dailyGoal": 2200,
+      "theme": "light",
+      "createdAt": "2025-11-27T11:23:10.072Z"
+    },
+    {
+      "id": "486df050-ef91-486d-9332-1f6667950287",
+      "name": "Udesha Rashmi",
+      "email": "udesha@gmail.com",
+      "passwordHash": "$2b$10$VJZFx.gFb396IsuFzuzszu8iXVRmnTo60sIInrtl1mjitgVIMQp0a",
+      "dailyGoal": 2000,
+      "theme": "light",
+      "createdAt": "2025-11-27T11:29:43.092Z"
     }
   ],
   "waterUsage": [
@@ -46,6 +64,24 @@
       "category": "drinking",
       "notes": "",
       "createdAt": "2025-11-27T11:12:21.449Z"
+    },
+    {
+      "id": "4c21c238-e739-40f3-b369-498e051f1f02",
+      "userId": "be3d6d03-1cd1-4276-acf7-6afcaaa6c9c0",
+      "date": "2025-11-27",
+      "liters": 750,
+      "category": "drinking",
+      "notes": "Smoke test entry",
+      "createdAt": "2025-11-27T11:23:10.323Z"
+    },
+    {
+      "id": "d167ef3d-b2c1-429d-9764-2e2ee8e6254b",
+      "userId": "486df050-ef91-486d-9332-1f6667950287",
+      "date": "2025-11-27",
+      "liters": 3.6,
+      "category": "drinking",
+      "notes": "",
+      "createdAt": "2025-11-27T11:34:15.890Z"
     }
   ]
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 
-const { readDb, writeDb, createId } = require('../store');
+const { WaterUsage, User } = require('../store');
+const { createId } = require('../store');
 
 const router = express.Router();
 
@@ -15,25 +16,30 @@ function toNumber(value) {
 router.get('/', async (req, res, next) => {
   try {
     const { userId, startDate, endDate, limit } = req.query || {};
-    const db = await readDb();
 
-    let entries = db.waterUsage;
+    let query = {};
 
     if (userId) {
-      entries = entries.filter((entry) => entry.userId === userId);
+      query.userId = userId;
     }
 
     if (startDate) {
-      entries = entries.filter((entry) => entry.date >= startDate);
+      query.date = { $gte: startDate };
     }
 
     if (endDate) {
-      entries = entries.filter((entry) => entry.date <= endDate);
+      if (query.date) {
+        query.date.$lte = endDate;
+      } else {
+        query.date = { $lte: endDate };
+      }
     }
 
-    entries = entries
-      .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-      .slice(0, limit ? Number(limit) : entries.length);
+    let entries = await WaterUsage.find(query).sort({ date: -1, createdAt: -1 });
+
+    if (limit) {
+      entries = entries.slice(0, Number(limit));
+    }
 
     res.json({ entries });
   } catch (error) {
@@ -54,25 +60,23 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ message: 'liters must be a positive number.' });
     }
 
-    const db = await readDb();
-    const userExists = db.users.some((user) => user.id === userId);
+    const user = await User.findOne({ id: userId });
 
-    if (!userExists) {
+    if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const entry = {
+    const entry = new WaterUsage({
       id: createId(),
       userId,
       date,
       liters: normalizedLiters,
       category,
       notes,
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: new Date(),
+    });
 
-    db.waterUsage.push(entry);
-    await writeDb(db);
+    await entry.save();
 
     res.status(201).json({ entry });
   } catch (error) {
@@ -83,10 +87,9 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { date, liters, category, notes } = req.body || {};
-    const db = await readDb();
-    const index = db.waterUsage.findIndex((entry) => entry.id === req.params.id);
+    const entry = await WaterUsage.findOne({ id: req.params.id });
 
-    if (index === -1) {
+    if (!entry) {
       return res.status(404).json({ message: 'Usage entry not found.' });
     }
 
@@ -95,17 +98,17 @@ router.put('/:id', async (req, res, next) => {
       if (normalizedLiters === null) {
         return res.status(400).json({ message: 'liters must be a positive number.' });
       }
-      db.waterUsage[index].liters = normalizedLiters;
+      entry.liters = normalizedLiters;
     }
 
-    if (date) db.waterUsage[index].date = date;
-    if (category) db.waterUsage[index].category = category;
-    if (typeof notes !== 'undefined') db.waterUsage[index].notes = notes;
+    if (date) entry.date = date;
+    if (category) entry.category = category;
+    if (typeof notes !== 'undefined') entry.notes = notes;
 
-    db.waterUsage[index].updatedAt = new Date().toISOString();
+    entry.updatedAt = new Date();
 
-    await writeDb(db);
-    res.json({ entry: db.waterUsage[index] });
+    await entry.save();
+    res.json({ entry });
   } catch (error) {
     next(error);
   }
@@ -113,15 +116,13 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const db = await readDb();
-    const index = db.waterUsage.findIndex((entry) => entry.id === req.params.id);
+    const entry = await WaterUsage.findOne({ id: req.params.id });
 
-    if (index === -1) {
+    if (!entry) {
       return res.status(404).json({ message: 'Usage entry not found.' });
     }
 
-    db.waterUsage.splice(index, 1);
-    await writeDb(db);
+    await WaterUsage.deleteOne({ id: req.params.id });
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -129,4 +130,3 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 module.exports = router;
-

@@ -1,7 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 
-const { readDb, writeDb, sanitizeUser, createId } = require('../store');
+const { User } = require('../store');
+const { sanitizeUser, createId } = require('../store');
 const { SALT_ROUNDS } = require('../config');
 
 const router = express.Router();
@@ -15,25 +16,25 @@ router.post('/register', async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase();
-    const db = await readDb();
 
-    if (db.users.some((user) => user.email === normalizedEmail)) {
+    const existingUser = await User.findOne({ email: normalizedEmail });
+
+    if (existingUser) {
       return res.status(409).json({ message: 'A user with that email already exists.' });
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = {
+    const user = new User({
       id: createId(),
       name,
       email: normalizedEmail,
       passwordHash,
       dailyGoal: Number(dailyGoal) || 2000,
       theme,
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: new Date(),
+    });
 
-    db.users.push(user);
-    await writeDb(db);
+    await user.save();
 
     res.status(201).json({ user: sanitizeUser(user) });
   } catch (error) {
@@ -49,8 +50,7 @@ router.post('/login', async (req, res, next) => {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    const db = await readDb();
-    const user = db.users.find((entry) => entry.email === email.toLowerCase());
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials.' });
@@ -69,4 +69,3 @@ router.post('/login', async (req, res, next) => {
 });
 
 module.exports = router;
-

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { setAuthUser } from '../api/client';
 
 const USER_STORAGE_KEY = 'h2omind:user';
 const THEME_STORAGE_KEY = 'theme';
@@ -37,10 +38,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData);
+    setAuthUser(userData);
   };
 
   const logout = () => {
     setUser(null);
+    setAuthUser(null);
     setTheme('light');
   };
 

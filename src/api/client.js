@@ -1,5 +1,19 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+let authUser = null;
+
+function setAuthUser(user) {
+  authUser = user;
+}
+
+function getAuthUser() {
+  if (!authUser) {
+    const stored = localStorage.getItem('h2omind:user');
+    authUser = stored ? JSON.parse(stored) : null;
+  }
+  return authUser;
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -32,23 +46,39 @@ export const usersApi = {
 
 export const usageApi = {
   list: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
+    const user = getAuthUser();
+    const query = new URLSearchParams({ ...params, ...(user?.id && !params.userId ? { userId: user.id } : {}) }).toString();
     return request(`/usage${query ? `?${query}` : ''}`);
   },
-  create: (data) => request('/usage', { method: 'POST', body: JSON.stringify(data) }),
+  create: (data) => {
+    const user = getAuthUser();
+    return request('/usage', { method: 'POST', body: JSON.stringify({ ...data, userId: data.userId || user?.id }) });
+  },
   update: (id, data) => request(`/usage/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => request(`/usage/${id}`, { method: 'DELETE' }),
 };
 
 export const insightsApi = {
-  summary: (userId) => request(`/insights/summary?userId=${userId}`),
-  alerts: (userId) => request(`/insights/alerts?userId=${userId}`),
+  summary: (userId) => {
+    const user = getAuthUser();
+    const id = userId || user?.id;
+    return request(`/insights/summary?userId=${id}`);
+  },
+  alerts: (userId) => {
+    const user = getAuthUser();
+    const id = userId || user?.id;
+    return request(`/insights/alerts?userId=${id}`);
+  },
 };
+
+export { setAuthUser, getAuthUser };
 
 export default {
   authApi,
   usersApi,
   usageApi,
   insightsApi,
+  setAuthUser,
+  getAuthUser,
 };
 
