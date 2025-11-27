@@ -1,6 +1,7 @@
 const express = require('express');
 
-const { readDb, sanitizeUser } = require('../store');
+const { WaterUsage, User } = require('../store');
+const { sanitizeUser } = require('../store');
 
 const router = express.Router();
 
@@ -178,14 +179,13 @@ router.get('/summary', async (req, res, next) => {
       return res.status(400).json({ message: 'userId is required.' });
     }
 
-    const db = await readDb();
-    const user = db.users.find((entry) => entry.id === userId);
+    const user = await User.findOne({ id: userId });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const entries = db.waterUsage.filter((entry) => entry.userId === userId);
+    const entries = await WaterUsage.find({ userId });
     const summary = summarizeUsage(entries, user);
 
     res.json(summary);
@@ -202,14 +202,13 @@ router.get('/alerts', async (req, res, next) => {
       return res.status(400).json({ message: 'userId is required.' });
     }
 
-    const db = await readDb();
-    const user = db.users.find((entry) => entry.id === userId);
+    const user = await User.findOne({ id: userId });
 
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const entries = db.waterUsage.filter((entry) => entry.userId === userId);
+    const entries = await WaterUsage.find({ userId });
     const summary = summarizeUsage(entries, user);
 
     res.json({ alerts: summary.alerts });
@@ -219,4 +218,3 @@ router.get('/alerts', async (req, res, next) => {
 });
 
 module.exports = router;
-
