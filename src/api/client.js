@@ -42,6 +42,7 @@ export const authApi = {
 export const usersApi = {
   get: (id) => request(`/users/${id}`),
   update: (id, data) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => request(`/users/${id}`, { method: 'DELETE' }),
 };
 
 export const usageApi = {

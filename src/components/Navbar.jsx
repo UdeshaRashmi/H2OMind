@@ -51,6 +51,9 @@ const Navbar = () => {
                   <Link to="/alerts" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${isActive('/alerts')} ${theme === 'dark' ? 'border-gray-600' : 'border-transparent'}`}>
                     Alerts
                   </Link>
+                  <Link to="/profile" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${isActive('/profile')} ${theme === 'dark' ? 'border-gray-600' : 'border-transparent'}`}>
+                    Profile
+                  </Link>
                   <Link to="/settings" className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${isActive('/settings')} ${theme === 'dark' ? 'border-gray-600' : 'border-transparent'}`}>
                     Settings
                   </Link>

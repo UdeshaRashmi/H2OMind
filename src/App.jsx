@@ -5,6 +5,7 @@ import AddUsage from './pages/AddUsage';
 import Insights from './pages/Insights';
 import Alerts from './pages/Alerts';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Navbar from './components/Navbar';
@@ -25,6 +26,7 @@ function AppContent() {
             <Route path="/add-usage" element={<AddUsage />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/alerts" element={<Alerts />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
