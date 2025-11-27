@@ -1,37 +1,72 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AlertBanner from '../components/AlertBanner';
 import { useAuth } from '../context/AuthContext';
+import { usersApi } from '../api/client';
 
 const Settings = () => {
-  const { theme, updateTheme } = useAuth();
+  const { user, isAuthenticated, theme, updateTheme, setUser } = useAuth();
   const [dailyGoal, setDailyGoal] = useState(2000);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
-    sms: false
+    sms: false,
   });
   const [localTheme, setLocalTheme] = useState(theme);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setDailyGoal(user.dailyGoal || 2000);
+      if (user.theme) {
+        setLocalTheme(user.theme);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    setLocalTheme(theme);
+  }, [theme]);
 
   const handleNotificationChange = (type) => {
     setNotifications({
       ...notifications,
-      [type]: !notifications[type]
+      [type]: !notifications[type],
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    updateTheme(localTheme);
-    setSuccess(true);
+    if (!user) {
+      setError('Please log in to update settings.');
+      return;
+    }
+    setSaving(true);
     setError('');
-    
-    // Reset success message after 3 seconds
-    setTimeout(() => {
-      setSuccess(false);
-    }, 3000);
+    try {
+      const { user: updatedUser } = await usersApi.update(user.id, {
+        dailyGoal,
+        theme: localTheme,
+      });
+      setUser(updatedUser);
+      updateTheme(localTheme);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to update settings.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <AlertBanner type="warning" message="Sign in to manage your settings." />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -175,9 +210,10 @@ const Settings = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                disabled={saving}
+                className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
               >
-                Save
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>

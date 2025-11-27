@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertBanner from '../components/AlertBanner';
+import { authApi } from '../api/client';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -19,15 +20,16 @@ const Register = () => {
     setError('');
 
     try {
-      // Mock registration - in a real app, you would call an API
-      if (name && email && password) {
-        login({ email, name });
-        navigate('/dashboard');
-      } else {
-        setError('Please fill in all fields');
-      }
+      const { user } = await authApi.register({
+        name,
+        email,
+        password,
+        dailyGoal: goal,
+      });
+      login(user);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Failed to create account. Please try again.');
+      setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -93,23 +95,7 @@ const Register = () => {
                 placeholder="Password"
               />
             </div>
-            <div>
-              <label htmlFor="goal" className="sr-only">
-                Daily Water Goal (ml)
-              </label>
-              <input
-                id="goal"
-                name="goal"
-                type="number"
-                min="500"
-                max="10000"
-                step="100"
-                value={goal}
-                onChange={(e) => setGoal(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Daily Water Goal (ml)"
-              />
-            </div>
+            
           </div>
 
           <div>

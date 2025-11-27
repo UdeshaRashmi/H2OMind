@@ -1,37 +1,54 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+const USER_STORAGE_KEY = 'h2omind:user';
+const THEME_STORAGE_KEY = 'theme';
+
 const AuthContext = createContext();
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem(USER_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(user));
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+  });
 
-  // Load theme from localStorage on initial render
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(savedTheme);
-    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-  }, []);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      setIsAuthenticated(true);
+      if (user.theme) {
+        setTheme(user.theme);
+      }
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      setIsAuthenticated(false);
+    }
+  }, [user]);
 
   const login = (userData) => {
     setUser(userData);
-    setIsAuthenticated(true);
   };
 
   const logout = () => {
     setUser(null);
-    setIsAuthenticated(false);
+    setTheme('light');
   };
 
   const updateTheme = (newTheme) => {
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    if (user) {
+      setUser({ ...user, theme: newTheme });
+    }
   };
 
   const value = {
@@ -40,12 +57,9 @@ export const AuthProvider = ({ children }) => {
     theme,
     login,
     logout,
-    updateTheme
+    updateTheme,
+    setUser,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

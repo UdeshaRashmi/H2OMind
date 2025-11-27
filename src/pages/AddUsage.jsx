@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import AlertBanner from '../components/AlertBanner';
+import { usageApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const AddUsage = () => {
+  const { user, isAuthenticated } = useAuth();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState('');
   const [category, setCategory] = useState('drinking');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -27,23 +31,41 @@ const AddUsage = () => {
     setError('');
     setSuccess(false);
 
+    if (!user) {
+      setError('Please log in to add usage.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Mock API call - in a real app, you would call an API
-      if (date && liters && category) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setSuccess(true);
-        // Reset form
-        setLiters('');
-      } else {
-        setError('Please fill in all fields');
-      }
+      await usageApi.create({
+        userId: user.id,
+        date,
+        liters: Number(liters),
+        category,
+        notes,
+      });
+      setSuccess(true);
+      setLiters('');
+      setNotes('');
     } catch (err) {
-      setError('Failed to add water usage. Please try again.');
+      setError(err.message || 'Failed to add water usage. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <AlertBanner type="warning" message="You need to be signed in to record water usage." />
+        <div className="mt-4 space-x-4">
+          <Link to="/login" className="text-primary-600 font-medium">Login</Link>
+          <Link to="/register" className="text-primary-600 font-medium">Register</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -124,6 +146,21 @@ const AddUsage = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                Notes (optional)
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                placeholder="e.g., Morning shower, cooking dinner"
+              />
             </div>
 
             <div className="flex justify-end space-x-3">

@@ -1,56 +1,82 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AlertBanner from '../components/AlertBanner';
+import Loader from '../components/Loader';
+import { insightsApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState([
-    {
-      id: 1,
-      type: 'warning',
-      message: "You've exceeded your daily goal by 15% today.",
-      date: '2025-10-24',
-      read: false
-    },
-    {
-      id: 2,
-      type: 'success',
-      message: "You're maintaining great balance this week!",
-      date: '2025-10-23',
-      read: true
-    },
-    {
-      id: 3,
-      type: 'warning',
-      message: "Your usage was 30% above your weekly average.",
-      date: '2025-10-20',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'success',
-      message: "Congratulations! You've met your daily goal for 5 consecutive days.",
-      date: '2025-10-19',
-      read: true
-    },
-    {
-      id: 5,
-      type: 'warning',
-      message: "Heavy usage detected in the morning hours.",
-      date: '2025-10-18',
-      read: true
-    }
-  ]);
+  const { user, isAuthenticated } = useAuth();
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAlerts = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const data = await insightsApi.alerts(user.id);
+        if (isMounted) {
+          setAlerts(data.alerts || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Failed to load alerts.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchAlerts();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAuthenticated]);
 
   const markAsRead = (id) => {
-    setAlerts(alerts.map(alert => 
-      alert.id === id ? { ...alert, read: true } : alert
-    ));
+    setAlerts((prev) =>
+      prev.map((alert) => (alert.id === id ? { ...alert, read: true } : alert))
+    );
   };
 
   const markAllAsRead = () => {
-    setAlerts(alerts.map(alert => ({ ...alert, read: true })));
+    setAlerts((prev) => prev.map((alert) => ({ ...alert, read: true })));
   };
 
-  const unreadCount = alerts.filter(alert => !alert.read).length;
+  const unreadCount = alerts.filter((alert) => !alert.read).length;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <AlertBanner type="warning" message="Sign in to view your alerts." />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <AlertBanner type="error" message={error} />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

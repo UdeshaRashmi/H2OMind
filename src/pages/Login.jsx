@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertBanner from '../components/AlertBanner';
+import { authApi } from '../api/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,15 +18,11 @@ const Login = () => {
     setError('');
 
     try {
-      // Mock login - in a real app, you would call an API
-      if (email && password) {
-        login({ email, name: email.split('@')[0] });
-        navigate('/dashboard');
-      } else {
-        setError('Please enter valid credentials');
-      }
+      const { user } = await authApi.login({ email, password });
+      login(user);
+      navigate('/dashboard');
     } catch (err) {
-      setError('Failed to login. Please check your credentials.');
+      setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
       setLoading(false);
     }

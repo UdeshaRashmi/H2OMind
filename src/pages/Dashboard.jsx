@@ -4,31 +4,94 @@ import ProgressCircle from '../components/ProgressCircle';
 import DailyUsageChart from '../components/DailyUsageChart';
 import WaterUsageCard from '../components/WaterUsageCard';
 import AlertBanner from '../components/AlertBanner';
+import Loader from '../components/Loader';
+import { insightsApi } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
-  const [todayUsage, setTodayUsage] = useState(1200); // Mock data
-  const [dailyGoal, setDailyGoal] = useState(2000); // Mock data
-  const [showAlert, setShowAlert] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock data for the chart
-  const weeklyData = [
-    { day: 'Mon', usage: 1800 },
-    { day: 'Tue', usage: 2100 },
-    { day: 'Wed', usage: 1950 },
-    { day: 'Thu', usage: 2200 },
-    { day: 'Fri', usage: 1750 },
-    { day: 'Sat', usage: 2400 },
-    { day: 'Sun', usage: 1200 },
-  ];
+  useEffect(() => {
+    let isMounted = true;
 
-  // Mock data for recent usage
-  const recentUsage = [
-    { id: 1, title: 'Morning Drink', amount: 300, category: 'drinking', date: 'Today, 8:30 AM' },
-    { id: 2, title: 'Shower', amount: 800, category: 'shower', date: 'Today, 7:15 AM' },
-    { id: 3, title: 'Cooking', amount: 100, category: 'cooking', date: 'Yesterday, 6:45 PM' },
-  ];
+    const fetchSummary = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError('');
+      try {
+        const data = await insightsApi.summary(user.id);
+        if (isMounted) {
+          setSummary(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Failed to load dashboard data.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-  const progressPercentage = Math.min(100, (todayUsage / dailyGoal) * 100);
+    fetchSummary();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <h2 className="text-2xl font-semibold mb-4">Please sign in to view your dashboard.</h2>
+        <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <AlertBanner type="error" message={error} />
+      </div>
+    );
+  }
+
+  const formatDate = (value) => {
+    if (!value) return 'Unknown date';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString();
+  };
+
+  const todayUsage = summary?.totals?.today ?? 0;
+  const dailyGoal = summary?.totals?.goal ?? 0;
+  const progressPercentage = summary?.progress?.percentage ?? 0;
+  const weeklyData = summary?.weeklyTrend?.map(({ day, usage }) => ({ day, usage })) || [];
+  const alerts = summary?.alerts || [];
+  const recentUsage = summary?.recentEntries?.map((entry) => ({
+    id: entry.id,
+    title: entry.notes || entry.category,
+    amount: entry.liters,
+    category: entry.category,
+    date: formatDate(entry.date),
+  })) || [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -37,15 +100,10 @@ const Dashboard = () => {
         <p className="mt-1 text-sm text-gray-500">Track your water consumption and progress toward your goals.</p>
       </div>
 
-      {showAlert && progressPercentage > 100 && (
-        <AlertBanner 
-          type="warning" 
-          message={`You've exceeded your daily goal by ${Math.round(progressPercentage - 100)}%! Try to conserve water tomorrow.`}
-          onClose={() => setShowAlert(false)}
-        />
+      {alerts.length > 0 && (
+        <AlertBanner type={alerts[0].type} message={alerts[0].message} />
       )}
 
-      {/* Stats Section */}
       <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
@@ -88,7 +146,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Action */}
       <div className="mb-8">
         <Link
           to="/add-usage"
@@ -101,12 +158,10 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Chart Section */}
       <div className="mb-8">
         <DailyUsageChart data={weeklyData} />
       </div>
 
-      {/* Recent Usage */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Recent Usage</h2>
@@ -114,17 +169,21 @@ const Dashboard = () => {
             View all
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {recentUsage.map((usage) => (
-            <WaterUsageCard
-              key={usage.id}
-              title={usage.title}
-              amount={usage.amount}
-              category={usage.category}
-              date={usage.date}
-            />
-          ))}
-        </div>
+        {recentUsage.length === 0 ? (
+          <p className="text-sm text-gray-500">No entries yet. Start by logging your water usage.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {recentUsage.map((usage) => (
+              <WaterUsageCard
+                key={usage.id}
+                title={usage.title}
+                amount={usage.amount}
+                category={usage.category}
+                date={usage.date}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
